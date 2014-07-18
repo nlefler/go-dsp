@@ -148,8 +148,9 @@ func (wavHeader *WavHeader) setup(header []byte) (err error) {
 func readSample(data []byte, sampleIndex int, header WavHeader) (n []int, f []float32, err error) {
 	n = make([]int, header.NumChannels)
 	f = make([]float32, header.NumChannels)
-	for ch := uint16(0); ch < header.NumChannels; ch++ {
-		si := uint16(sampleIndex)*header.NumChannels + ch
+	nChannels := int(header.NumChannels)
+	for ch := 0; ch < nChannels; ch++ {
+		si := (sampleIndex * nChannels) + ch
 		switch header.AudioFormat {
 		case wavFormatPCM:
 			switch header.BitsPerSample {
