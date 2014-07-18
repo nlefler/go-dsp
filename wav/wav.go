@@ -148,28 +148,32 @@ func (wavHeader *WavHeader) setup(header []byte) (err error) {
 func readSample(data []byte, sampleIndex int, header WavHeader) (n []int, f []float32, err error) {
 	n = make([]int, header.NumChannels)
 	f = make([]float32, header.NumChannels)
+	siBase := sampleIndex * int(header.BlockAlign)
+	chSize := int(header.BitsPerSample) / 8
+
 	for ch := uint16(0); ch < header.NumChannels; ch++ {
-		si := uint16(sampleIndex)*header.NumChannels + ch
 		switch header.AudioFormat {
 		case wavFormatPCM:
 			switch header.BitsPerSample {
 			case 8:
-				n[ch] = int(data[si])
+				n[ch] = int(data[siBase+int(ch)*chSize])
 			case 16:
-				var value int16
-				value, err = bLEtoInt16(data, 2*si)
+				var val int16
+				val, err = bLEtoInt16(data, siBase+(int(ch)*chSize))
 				if err != nil {
 					return
 				}
-				n[ch] = int(value)
+				n[ch] = int(val)
 			}
 		case wavFormatIEEEFloat:
 			switch header.BitsPerSample {
 			case 32:
-				f[ch], err = bLEtoFloat32(data, 4*si)
+				var val float32
+				val, err = bLEtoFloat32(data, siBase+(int(ch)*chSize))
 				if err != nil {
 					return
 				}
+				f[ch] = val
 			}
 		}
 	}
@@ -288,7 +292,7 @@ func (wav *StreamedWav) ReadSamples(numSamples int) (samples [][]int, err error)
 }
 
 // little-endian [4]byte to uint32 conversion
-func bLEtoUint32(b []byte, idx uint16) (value uint32, err error) {
+func bLEtoUint32(b []byte, idx int) (value uint32, err error) {
 	buf := bytes.NewReader([]byte{b[idx], b[idx+1], b[idx+2], b[idx+3]})
 	err = binary.Read(buf, binary.LittleEndian, &value)
 
@@ -296,21 +300,21 @@ func bLEtoUint32(b []byte, idx uint16) (value uint32, err error) {
 }
 
 // little-endian [2]byte to uint16 conversion
-func bLEtoUint16(b []byte, idx uint16) (value uint16, err error) {
+func bLEtoUint16(b []byte, idx int) (value uint16, err error) {
 	buf := bytes.NewReader([]byte{b[idx], b[idx+1]})
 	err = binary.Read(buf, binary.LittleEndian, &value)
 
 	return
 }
 
-func bLEtoInt16(b []byte, idx uint16) (value int16, err error) {
+func bLEtoInt16(b []byte, idx int) (value int16, err error) {
 	buf := bytes.NewReader([]byte{b[idx], b[idx+1]})
 	err = binary.Read(buf, binary.LittleEndian, &value)
 
 	return
 }
 
-func bLEtoFloat32(b []byte, idx uint16) (value float32, err error) {
+func bLEtoFloat32(b []byte, idx int) (value float32, err error) {
 	buf := bytes.NewReader([]byte{b[idx], b[idx+1], b[idx+2], b[idx+3]})
 	err = binary.Read(buf, binary.LittleEndian, &value)
 
